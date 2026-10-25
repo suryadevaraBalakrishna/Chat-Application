@@ -2,7 +2,11 @@
 const { Server } = require('socket.io')
 require('dotenv').config()
 
-const origin_url=process.env.origin;
+const allowedOrigins = [
+    'http://localhost:5173',
+    'https://chat-application-front-end-two.vercel.app',
+    process.env.origin?.replace(/\/$/, ''),
+].filter(Boolean)
 
 let io
 
@@ -11,9 +15,9 @@ const onlineUsers = new Map()
 const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
-            origin: origin_url,
-            methods: ['GET', 'POST']
-        }
+            origin: allowedOrigins,
+            methods: ['GET', 'POST'],
+        },
     })
 
     io.on('connection', (socket) => {
@@ -38,24 +42,30 @@ const initializeSocket = (server) => {
 
             console.log('User joined:', id)
 
-            // Notify everyone when this user becomes online
+            // Notify clients when a user comes online
             if (wasOffline) {
                 io.emit('userStatus', {
                     userId: id,
-                    online: true
+                    online: true,
                 })
             }
 
-            // Send current online users to this client
-            socket.emit('onlineUsers', Array.from(onlineUsers.keys()))
+            // Send the current online-user list
+            socket.emit(
+                'onlineUsers',
+                Array.from(onlineUsers.keys())
+            )
         })
 
-        // Client can request the current online-user list
+        // Client requests online users
         socket.on('requestOnlineUsers', () => {
-            socket.emit('onlineUsers', Array.from(onlineUsers.keys()))
+            socket.emit(
+                'onlineUsers',
+                Array.from(onlineUsers.keys())
+            )
         })
 
-        // Keep your existing message event
+        // Existing real-time message event
         socket.on('sendMessage', (message) => {
             if (!message?.senderId || !message?.receiverId) return
 
@@ -72,9 +82,13 @@ const initializeSocket = (server) => {
             )
 
             io.to(receiverId).emit('newMessage', message)
-            io.to(senderId).except(socket.id).emit('newMessage', message)
+
+            io.to(senderId)
+                .except(socket.id)
+                .emit('newMessage', message)
         })
 
+        // Handle disconnection
         socket.on('disconnect', () => {
             const userId = socket.data.userId
 
@@ -83,13 +97,13 @@ const initializeSocket = (server) => {
 
                 connections.delete(socket.id)
 
-                // Only mark offline after their last connection closes
+                // Mark offline only after the last connection closes
                 if (connections.size === 0) {
                     onlineUsers.delete(userId)
 
                     io.emit('userStatus', {
                         userId,
-                        online: false
+                        online: false,
                     })
                 }
             }
@@ -111,5 +125,5 @@ const getIO = () => {
 
 module.exports = {
     initializeSocket,
-    getIO
+    getIO,
 }
