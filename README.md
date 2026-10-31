@@ -4,7 +4,7 @@ A full-stack real-time chat application built using the **MERN Stack**. Users ca
 
 ## 🚀 Live Demo
 
-🔗 **Frontend:** https://chat-application-front-end-two.vercel.app/login
+🔗 **Frontend:** https://chat-application-front-end-two.vercel.app/
 
 🔗 **Backend API:** https://chat-application-worm.onrender.com/
 
